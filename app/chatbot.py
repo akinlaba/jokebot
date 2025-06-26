@@ -42,7 +42,6 @@ class JokeBot:
         return response, retrieved
 
     def generate_response(self, query, retrieved):
-        print("=== ENTERED generate_response ===")
         if not self.generator:
             return random.choice(retrieved)
 
@@ -54,8 +53,5 @@ class JokeBot:
 
             Assistant: Pick the funniest one and rewrite it as a joke:"""
 
-        print("=== PROMPT SENT TO QWEN ===")
-        print(prompt)
-        print("=== RESPONSE FROMS QWEN ===")
         response = self.generator(prompt)
         return response
