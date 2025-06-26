@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from app.config import config
 from app.llm_interface import qwen_generate
+from app.chat_logger import log_chat
+from uuid import uuid4
 
 llm_path = Path(config["llm_path"])
 corpus_path = Path(config["corpus_path"])
@@ -24,12 +26,22 @@ class QueryInput(BaseModel):
 
 class ChatInput(BaseModel):
     query: str
+    session_id: str | None = None  # if we want session_id from the client instead
 
 @app.post("/chat")
 def chat(input: ChatInput):
-    response = bot.get_response(input.query)
+    response, retrieved = bot.get_response(input.query)
+    
+    session_id = getattr(input, "session_id", None) or str(uuid4())
+
+    log_chat(user_input=input.query, 
+             bot_response=response, 
+             session_id=session_id, 
+             retrieved_jokes=retrieved)
+    
     return {"response": response}
 
 @app.get("/")
 def root():
     return {"message": "JokeBot is alive!"}
+

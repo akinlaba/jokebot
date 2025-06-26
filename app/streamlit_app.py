@@ -6,6 +6,11 @@ import sys
 from pathlib import Path
 from llm_interface import qwen_generate
 from config import config
+import uuid
+from chat_logger import log_chat
+
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 
 llm_path = Path(config["llm_path"])
 corpus_path = Path(config["corpus_path"])
@@ -46,7 +51,12 @@ for i, (role, message) in enumerate(st.session_state.chat_history):
 user_input = st.chat_input("Type your message...")
 
 if user_input:
-    bot_response = bot.get_response(user_input)
+    bot_response, retrieved = bot.get_response(user_input)
+
+    log_chat(user_input, 
+             bot_response, 
+             session_id=st.session_state.session_id, 
+             retrieved_jokes=retrieved)
 
     st.session_state.chat_history.append(("user", user_input))
     st.session_state.chat_history.append(("bot", bot_response))

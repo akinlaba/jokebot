@@ -38,7 +38,8 @@ class JokeBot:
     def get_response(self, query, top_k=None):
         top_k = self.top_k
         retrieved = self.retrieve_responses(query, top_k=top_k)
-        return self.generate_response(query, retrieved)
+        response = self.generate_response(query, retrieved)
+        return response, retrieved
 
     def generate_response(self, query, retrieved):
         print("=== ENTERED generate_response ===")
