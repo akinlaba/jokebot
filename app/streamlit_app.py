@@ -2,12 +2,20 @@ import streamlit as st
 from chatbot import JokeBot
 import json
 from datetime import datetime
+import sys
+from pathlib import Path
+from llm_interface import qwen_generate
+from config import config
 
-# Load corpus and bot
-with open("data/corpus.json", "r", encoding="utf-8") as f:
-    corpus = [item["quoted_post"] for item in json.load(f)]
+llm_path = Path(config["llm_path"])
+corpus_path = Path(config["corpus_path"])
 
-bot = JokeBot(corpus)
+sys.path.insert(0, llm_path)
+
+with open(corpus_path, "r") as f:
+    corpus = json.load(f)
+
+bot = JokeBot(corpus, generator=qwen_generate)
 
 st.set_page_config(page_title="JokeBot 🤖", layout="centered")
 st.title("😂 JokeBot")
@@ -45,7 +53,7 @@ if user_input:
     st.rerun()  # refresh UI to reflect new chat bubble
 
 # Clear chat button
-if st.button("🧹 Clear chat"):
+if st.button("Clear chat"):
     st.session_state.chat_history = []
     st.session_state.feedback = []
     st.rerun()
