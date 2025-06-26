@@ -18,3 +18,7 @@ class QueryInput(BaseModel):
 def chat(input: QueryInput):
     response = bot.get_response(input.query)
     return {"response": response}
+
+@app.get("/")
+def root():
+    return {"message": "JokeBot is alive!"}
