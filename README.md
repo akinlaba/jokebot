@@ -90,3 +90,6 @@ All chat interactions are stored in data/chat_logs.db. Each entry includes:
 - LLM response
 - Top 10 retrieved jokes used as context
 You can inspect the logs using the SQLite CLI or a tool like DB Browser for SQLite.
+
+## Tests
+In Progress
