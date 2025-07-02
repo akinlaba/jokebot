@@ -1,8 +1,11 @@
 from sentence_transformers import SentenceTransformer, util
 import random
+import numpy as np
 import torch
 from pathlib import Path
 from app.config import config
+import re
+import unicodedata
 
 class JokeBot:
     def __init__(self, corpus, generator=None):
@@ -11,6 +14,12 @@ class JokeBot:
         self.top_k = config["top_k"]
         self.generator = generator
         self.model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+        self.image_flags = config["image_flags"]
+        self.soft_flags = config["soft_flags"]
+        self.hard_flags = config["hard_flags"]
+        self.joke_keywords = config["joke_keywords"]
+        self.hallucinated_phrases = config["hallucinated_phrases"]
+        self.prompts = config["prompts"]
 
         if self.embedding_path.exists():
             self.embeddings = torch.load(self.embedding_path)
@@ -61,29 +70,40 @@ class JokeBot:
         if not self.generator:
             return random.choice(retrieved)
 
-        # retrieved_texts = [r["quoted_post"] for r in retrieved]
-        context = "\n".join(f"[{i+1}] {r}" for i, r in enumerate(retrieved))
+        intent = self.classify_input(query)
+        random.shuffle(retrieved)
+        fallback_response = retrieved[0] if retrieved else "Sorry, nothing funny found."
+        template = self.prompts.get(intent, self.prompts["banter"])
 
-        prompt = f"""User: I'm looking for a funny Nigerian-style joke. Here are some options:
-            {context}
+        for i, joke in enumerate(retrieved[:5]):
+            joke = joke.replace('"', "'")
+            prompt = template.format(joke=joke)
+            try:
+                response = self.generator(prompt)
+            except Exception as e:
+                print(f"[Qwen ERROR]: {e}")
+                continue
+            cleaned = self.postprocess_response(response)
+            if cleaned:
+                return cleaned
 
-            Assistant: Pick the funniest one and rewrite it as a joke:"""
-
-        response = self.generator(prompt)
-        return response
+        return fallback_response
     
-    @staticmethod
-    def is_viable_joke(text):
+    def is_viable_joke(self, text):
         text = str(text).lower().strip()
         if len(text) < 100 or len(text) > 500:
             return False
-        soft_flags = ["follow me", "@", "whatsapp", "like and share"]
-        hard_flags = ["rape", "masturbation", "bastard", "lick a girl", "death", "sperm", "sperms", "sp*rms", 
-                    "witchcraft", "girlfriend bobby", "nepa", "kill you", "comment thief"]
+        image_flags = self.image_flags
+        # Moderate red flags (allowed, but penalized if needed)
+        soft_flags = self.soft_flags
+        # Hard red flags (never allow)
+        hard_flags = self.hard_flags
+        if any(kw in text for kw in image_flags):
+            return False
         if any(hf in text for hf in hard_flags):
             return False
         if any(sf in text for sf in soft_flags):
-            return len(text) > 150
+            return len(text) > 150  # Allow longer, well-formed jokes with mild spam
         return True
 
     @staticmethod
@@ -100,7 +120,6 @@ class JokeBot:
 
     @staticmethod
     def weighted_sample(entries, weights, k=10):
-        import numpy as np
         weights = np.array(weights)
         if weights.sum() == 0:
             weights = np.ones_like(weights)
@@ -108,11 +127,28 @@ class JokeBot:
         indices = np.random.choice(len(entries), size=min(k, len(entries)), replace=False, p=probs)
         return [entries[i] for i in indices]
 
-    @staticmethod
-    def classify_input(text):
-        joke_keywords = [
-            "joke", "laugh", "funny", "make me laugh", "tell me something funny",
-            "crack me up", "give me joke", "tell me a joke", "i wan laugh"
-        ]
+    def classify_input(self, text):
+        joke_keywords = self.joke_keywords
         text = text.lower()
         return "joke" if any(kw in text for kw in joke_keywords) else "banter"
+    
+    def postprocess_response(self, text, min_len=30):
+        if not text or not isinstance(text, str):
+            return ""
+
+        text = text.strip()
+
+        # Remove echoes or instruction-style hallucinations
+        hallucinated_phrases = self.hallucinated_phrases
+        if any(p in text.lower() for p in hallucinated_phrases):
+            return ""
+
+        # Remove Chinese or emoji-only outputs
+        if re.search(r'[\u4e00-\u9fff]', text):
+            return ""
+
+        cleaned = ''.join(c for c in text if unicodedata.category(c)[0] != "C").strip()
+        if len(cleaned.split()) < 4 or len(cleaned) < min_len:
+            return ""
+
+        return re.sub(r'\n{2,}', '\n', cleaned.strip(" \"“”’‘"))
