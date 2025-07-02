@@ -1,13 +1,13 @@
 import streamlit as st
-from chatbot import JokeBot
+from app.chatbot import JokeBot
 import json
 from datetime import datetime
 import sys
 from pathlib import Path
-from llm_interface import qwen_generate
-from config import config
+from app.llm_interface import qwen_generate
+from app.config import config
 import uuid
-from chat_logger import log_chat
+from app.chat_logger import log_chat
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
