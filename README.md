@@ -18,20 +18,13 @@
 ├── README.md
 ├── app
 │   ├── __init__.py
-│   ├── __pycache__
-│   │   ├── __init__.cpython-312.pyc
-│   │   ├── api.cpython-312.pyc
-│   │   ├── chat_logger.cpython-312.pyc
-│   │   ├── chatbot.cpython-312.pyc
-│   │   ├── config.cpython-312.pyc
-│   │   └── llm_interface.cpython-312.pyc
 │   ├── api.py
 │   ├── chat_logger.py
 │   ├── chatbot.py
 │   ├── config.py
 │   ├── llm_interface.py
 │   ├── main.py
-│   └── streamlit_app.py
+└── streamlit_app.py
 ├── data
 │   ├── chat_logs.db
 │   ├── config.json
